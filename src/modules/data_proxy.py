@@ -1,9 +1,12 @@
 # src/modules/data_proxy.py
-import sys, uuid, json
+import sys
+import uuid
+import json
 from datetime import datetime
 from decimal import Decimal
 from botocore.exceptions import ClientError
 from modules.db_singleton import DatabaseSingleton
+
 
 class DataProxy:
     def __init__(self):
@@ -13,7 +16,8 @@ class DataProxy:
             self.table_log = db.get_corporate_log_table()
             print("DataProxy inicializado.")
         except Exception as e:
-            print(f"Error fatal al inicializar DataProxy: {e}", file=sys.stderr)
+            print(
+                f"Error fatal al inicializar DataProxy: {e}", file=sys.stderr)
             sys.exit(1)
 
     def _log_action(self, client_uuid, session_id, action, details=""):
@@ -40,9 +44,11 @@ class DataProxy:
             return {"error": e.response['Error']['Message']}, 500
 
     def set_item(self, item_data, client_uuid, session_id):
-        self._log_action(client_uuid, session_id, "set", f"ID: {item_data.get('id')}")
+        self._log_action(client_uuid, session_id, "set",
+                         f"ID: {item_data.get('id')}")
         try:
-            item_data_decimal = json.loads(json.dumps(item_data), parse_float=Decimal)
+            item_data_decimal = json.loads(
+                json.dumps(item_data), parse_float=Decimal)
             self.table_data.put_item(Item=item_data_decimal)
             return item_data, 200
         except Exception as e:
