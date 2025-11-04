@@ -22,11 +22,12 @@ class DatabaseSingleton:
 
         print("Inicializando conexión a DynamoDB...")
         try:
+            # --- CORRECCIÓN: Se fija la región AWS para consistencia ---
             self.dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
             self.table_corporate_data = self.dynamodb.Table('CorporateData')
             self.table_corporate_log = self.dynamodb.Table('CorporateLog')
-            self.table_corporate_data.load()  # Verifica la conexión
-            self.table_corporate_log.load()  # Verifica la conexión
+            self.table_corporate_data.load()
+            self.table_corporate_log.load()
             print("Tablas 'CorporateData' y 'CorporateLog' cargadas.")
             self._initialized = True
         except Exception as e:

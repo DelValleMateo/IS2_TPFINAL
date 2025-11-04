@@ -1,10 +1,10 @@
 {
     "ACTION": "set",
-    "id": "Prueba2",
+    "id": "MateosPrueba2",
     "cp": "3260",
     "CUIT": "30-70925411-8",
     "domicilio": "Calle Falsa 123 - MODIFICADO",
-    "idreq": 9999,
+    "idreq": 99999,
     "localidad": "Concepcion del Uruguay",
     "provincia": "Entre Rios",
     "sede": "FCyT-Central"

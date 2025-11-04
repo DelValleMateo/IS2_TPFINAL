@@ -48,25 +48,44 @@ class Server:
             client_uuid = data.get("UUID", "UUID_DESCONOCIDO")
             session_id = str(uuid.uuid4())
 
+            # --- LÓGICA DE ACCIONES Y NOTIFICACIÓN ---
             if action == "get":
-                item_id = data.get("id")
+                # Uso preferente de 'id' minúscula, luego 'ID' mayúscula (compatibilidad).
+                item_id = data.get("id") or data.get("ID")
+
                 if item_id:
                     resp_data, status = self.data_proxy.get_item(
                         item_id, client_uuid, session_id)
+                    # NOTIFICACIÓN GET: Solo si la operación fue exitosa.
+                    if status == 200:
+                        self.subject.notify(
+                            {"action": action, "data": resp_data}, DecimalEncoder)
                 else:
                     resp_data, status = {"error": "Missing ID"}, 400
 
             elif action == "set":
-                if "id" in data:
+                if "id" in data or "ID" in data:
                     resp_data, status = self.data_proxy.set_item(
                         data, client_uuid, session_id)
+                    # NOTIFICACIÓN SET: Solo si la operación fue exitosa.
                     if status == 200:
-                        self.subject.notify(resp_data, DecimalEncoder)
+                        self.subject.notify(
+                            {"action": action, "data": resp_data}, DecimalEncoder)
                 else:
                     resp_data, status = {"error": "Missing ID"}, 400
 
             elif action == "list":
                 resp_data, status = self.data_proxy.list_items(
+                    client_uuid, session_id)
+                # NOTIFICACIÓN LIST: Solo si la operación fue exitosa.
+                if status == 200:
+                    self.subject.notify(
+                        {"action": action, "data": resp_data}, DecimalEncoder)
+
+            # --- NUEVA ACCIÓN AÑADIDA: listlog ---
+            elif action == "listlog":
+                # Delega al nuevo método list_logs del Proxy.
+                resp_data, status = self.data_proxy.list_logs(
                     client_uuid, session_id)
 
             elif action == "subscribe":
@@ -108,38 +127,32 @@ class Server:
             # self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Comentado para test_05
             self.server_socket.bind((self.host, self.port))
 
-            # --- 1. ESTA ES LA CORRECCIÓN ---
-            # Establece un timeout de 1 segundo en el socket principal.
-            # Esto significa que accept() se desbloqueará después de 1 segundo.
+            # --- CORRECCIÓN: Solución a Control+C ---
+            # Establece un timeout de 1 segundo
             self.server_socket.settimeout(1.0)
 
             self.server_socket.listen(5)
             print(f"Servidor {VERSION} escuchando en {self.host}:{self.port}")
 
             while True:
-                # --- 2. ESTA ES LA SEGUNDA PARTE DE LA CORRECCIÓN ---
+                # El accept() ahora está envuelto en un try/except para el timeout
                 try:
-                    # Intenta aceptar un cliente (ahora bloquea por máx. 1 seg)
                     conn, addr = self.server_socket.accept()
-
-                    # Si tiene éxito, crea el hilo como antes
+                    # Si tiene éxito, crea el hilo
                     threading.Thread(target=self.handle_client_connection, args=(
                         conn, addr), daemon=True).start()
 
                 except socket.timeout:
-                    # Si pasan 1 seg y no hay clientes, se lanza socket.timeout.
-                    # Simplemente lo ignoramos (con 'pass') y el 'while True'
-                    # vuelve a intentarlo. Esto le da a Python la oportunidad
-                    # de procesar el Ctrl+C pendiente.
+                    # Si pasa el timeout, ignoramos (pass) y el bucle vuelve a empezar
                     pass
+                except KeyboardInterrupt:
+                    # Si ocurre Control+C, salta al except externo.
+                    raise
 
         except socket.error as e:
             print(f"Error de Socket: {e}", file=sys.stderr)
             sys.exit(1)
         except KeyboardInterrupt:
-            # Ahora, cuando presiones Ctrl+C, el bucle 'while True' se
-            # interrumpirá (en la espera del 'pass' o 'accept')
-            # y saltará aquí correctamente.
             print("\nCerrando el servidor...")
         finally:
             if hasattr(self, 'server_socket') and self.server_socket:

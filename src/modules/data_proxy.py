@@ -2,7 +2,8 @@
 import sys
 import uuid
 import json
-from datetime import datetime
+# Se importa timezone para asegurar logs en UTC
+from datetime import datetime, timezone
 from decimal import Decimal
 from botocore.exceptions import ClientError
 from modules.db_singleton import DatabaseSingleton
@@ -26,7 +27,8 @@ class DataProxy:
                 'id': str(uuid.uuid4()),
                 'CPUid': str(client_uuid),
                 'sessionid': str(session_id),
-                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                # --- CORRECCIÓN: Se usa la hora UTC para logs estándar ---
+                'timestamp': datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 'action': action,
                 'details': details
             }
@@ -60,4 +62,17 @@ class DataProxy:
             response = self.table_data.scan()
             return (response['Items'], 200) if 'Items' in response else ([], 200)
         except ClientError as e:
+            return {"error": e.response['Error']['Message']}, 500
+
+    # --- NUEVA FUNCIÓN AÑADIDA: list_logs ---
+    def list_logs(self, client_uuid, session_id):
+        # LÓGICA DEL PROXY: Registra la acción de auditoría 'listlog'
+        self._log_action(client_uuid, session_id, "listlog")
+        try:
+            # ACCIÓN REAL: Escanea la tabla CorporateLog
+            response = self.table_log.scan()
+            # Devuelve los ítems de la tabla CorporateLog
+            return (response['Items'], 200) if 'Items' in response else ([], 200)
+        except ClientError as e:
+            # Manejo de errores de AWS
             return {"error": e.response['Error']['Message']}, 500
