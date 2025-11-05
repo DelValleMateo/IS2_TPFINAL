@@ -50,43 +50,38 @@ class Server:
 
             # --- LÓGICA DE ACCIONES Y NOTIFICACIÓN ---
             if action == "get":
-                # Uso preferente de 'id' minúscula, luego 'ID' mayúscula (compatibilidad).
                 item_id = data.get("id") or data.get("ID")
-
                 if item_id:
                     resp_data, status = self.data_proxy.get_item(
-                        item_id, client_uuid, session_id)
-                    # NOTIFICACIÓN GET: Solo si la operación fue exitosa.
-                    if status == 200:
-                        self.subject.notify(
-                            {"action": action, "data": resp_data}, DecimalEncoder)
+                        item_id, client_uuid, session_id
+                    )
+                    # IMPORTANTE: GET NO NOTIFICA
                 else:
                     resp_data, status = {"error": "Missing ID"}, 400
 
             elif action == "set":
                 if "id" in data or "ID" in data:
                     resp_data, status = self.data_proxy.set_item(
-                        data, client_uuid, session_id)
-                    # NOTIFICACIÓN SET: Solo si la operación fue exitosa.
+                        data, client_uuid, session_id
+                    )
+                    # SOLO ACÁ notificamos porque es una actualización de datos
                     if status == 200:
                         self.subject.notify(
-                            {"action": action, "data": resp_data}, DecimalEncoder)
+                            {"action": action, "data": resp_data}, DecimalEncoder
+                        )
                 else:
                     resp_data, status = {"error": "Missing ID"}, 400
 
             elif action == "list":
                 resp_data, status = self.data_proxy.list_items(
-                    client_uuid, session_id)
-                # NOTIFICACIÓN LIST: Solo si la operación fue exitosa.
-                if status == 200:
-                    self.subject.notify(
-                        {"action": action, "data": resp_data}, DecimalEncoder)
+                    client_uuid, session_id
+                )
+                # IMPORTANTE: LIST NO NOTIFICA
 
-            # --- NUEVA ACCIÓN AÑADIDA: listlog ---
             elif action == "listlog":
-                # Delega al nuevo método list_logs del Proxy.
                 resp_data, status = self.data_proxy.list_logs(
-                    client_uuid, session_id)
+                    client_uuid, session_id
+                )
 
             elif action == "subscribe":
                 self.data_proxy._log_action(

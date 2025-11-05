@@ -64,7 +64,6 @@ class DataProxy:
         except ClientError as e:
             return {"error": e.response['Error']['Message']}, 500
 
-    # --- NUEVA FUNCIÓN AÑADIDA: list_logs ---
     def list_logs(self, client_uuid, session_id):
         # LÓGICA DEL PROXY: Registra la acción de auditoría 'listlog'
         self._log_action(client_uuid, session_id, "listlog")
